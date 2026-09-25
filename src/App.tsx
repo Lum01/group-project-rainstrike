@@ -165,7 +165,7 @@ export default function App() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-                  <span>Grab Singapore Dispatch Operator Intelligence</span>
+                  <span>RainStrike · Grab Operator Fleet Intelligence</span>
                   <span aria-hidden="true">·</span>
                   <span>Live Operations Room</span>
                 </div>
@@ -321,7 +321,7 @@ export default function App() {
       <footer className="mt-auto border-t border-slate-800 bg-slate-950 py-6 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-400">Grab Singapore Operations System</span>
+            <span className="font-semibold text-slate-400">RainStrike · Grab Singapore Operations System</span>
             <span aria-hidden="true">·</span>
             <span>LTA Datamall MCP v2.1</span>
             <span aria-hidden="true">·</span>

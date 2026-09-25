@@ -39,13 +39,13 @@ export const TopNav: React.FC<TopNavProps> = ({
         {/* Zone 1: Single text element wordmark */}
         <div className="flex items-center gap-3 shrink-0">
           <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-base shadow-sm shadow-emerald-500/10">
-            GP
+            RS
           </div>
           <button
             onClick={() => onSelectTab('map')}
             className="text-lg font-bold tracking-tight text-white hover:text-emerald-400 transition-colors cursor-pointer text-left"
           >
-            GrabPulse SG
+            RainStrike
           </button>
         </div>
 
