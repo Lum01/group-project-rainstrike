@@ -35,6 +35,8 @@ export const McpServerStudio: React.FC = () => {
       defaultArgs = { sector: 'Jurong' };
     } else if (toolName === 'onemap_get_hub_ingress_egress') {
       defaultArgs = { hub_id: 'changi_airport', time_slot: '17:45' };
+    } else if (toolName === 'onemap_get_open_map_layer') {
+      defaultArgs = { layer_type: 'night_basemap' };
     } else if (toolName === 'grab_predict_taxi_surge') {
       defaultArgs = { hub_id: 'all', weather_override: 'Heavy Thundery Showers' };
     } else if (toolName === 'grab_get_prioritized_taxi_demand_list') {
@@ -153,7 +155,7 @@ export const McpServerStudio: React.FC = () => {
             }`}
           >
             <Terminal className="w-3.5 h-3.5" />
-            <span>Tools (6)</span>
+            <span>Tools ({REGISTERED_MCP_TOOLS.length})</span>
           </button>
           <button
             onClick={() => setActiveSubTab('resources')}

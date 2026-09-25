@@ -45,11 +45,11 @@ export const SingaporeMap: React.FC<SingaporeMapProps> = ({
       zoomControl: false
     });
 
-    // Dark Basemap Tiles (CartoDB Dark Matter)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://carto.com/">CARTO</a>, &copy; OpenStreetMap contributors',
-      subdomains: 'abcd',
-      maxZoom: 19
+    // Open basemap tiles: OpenStreetMap with dark tactical filter (Zero API key required)
+    const openBasemap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors · SLA OneMap SG · LTA Datamall MCP',
+      maxZoom: 18,
+      className: 'osm-dark-tiles'
     }).addTo(map);
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);

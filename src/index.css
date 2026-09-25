@@ -6,6 +6,11 @@
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
 }
 
+/* Transform standard OpenStreetMap tiles into high-contrast dark operations palette */
+.osm-dark-tiles {
+  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+}
+
 .custom-hub-marker {
   background: transparent !important;
   border: none !important;

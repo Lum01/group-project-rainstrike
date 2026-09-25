@@ -167,6 +167,18 @@ app.post('/api/mcp', async (req: Request, res: Response) => {
               }))
             };
           }
+        } else if (toolName === 'onemap_get_open_map_layer') {
+          const layerType = args.layer_type || 'night_basemap';
+          executionResult = {
+            provider: 'Singapore Land Authority (SLA) & OpenStreetMap Foundation',
+            layer_type: layerType,
+            api_key_required: false,
+            tile_endpoint: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+            fallback_tile_endpoint: 'https://www.onemap.gov.sg/maps/tiles/Default/{z}/{x}/{y}.png',
+            status: 'OPERATIONAL_ZERO_KEY',
+            license: 'Open Data Commons / SLA Open Map Policy',
+            supported_sectors: ['Central', 'East', 'West', 'North', 'North-East', 'South']
+          };
         } else if (toolName === 'grab_get_prioritized_taxi_demand_list') {
           const minPriority = args.min_priority || 'all';
           let list = getPrioritizedHubList(currentHubs);

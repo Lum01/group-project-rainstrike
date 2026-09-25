@@ -1078,6 +1078,16 @@ export const REGISTERED_MCP_TOOLS = [
     }
   },
   {
+    name: 'onemap_get_open_map_layer',
+    description: 'Retrieves Singapore Land Authority (SLA) open spatial tile schema and vector boundary layers for Singapore transit sectors with zero proprietary or third-party API key requirements.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        layer_type: { type: 'string', enum: ['night_basemap', 'transit_corridors', 'planning_boundaries'], description: 'Spatial layer type to fetch' }
+      }
+    }
+  },
+  {
     name: 'grab_dispatch_fleet_broadcast',
     description: 'Broadcasts a high-priority push advisory to Grab driver app fleet within 10-min radius with guaranteed surge multiplier, bonus incentive, and recommended OneMap ingress corridor.',
     inputSchema: {
