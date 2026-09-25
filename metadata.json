@@ -1,0 +1,6 @@
+{
+  "name": "GrabPulse SG - LTA & Weather Predictive Taxi Dispatch",
+  "description": "Grab Operator fleet demand intelligence console combining Singapore LTA Datamall MCP passenger flows, NEA live weather forecasts, and OneMap ingress/egress routing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
