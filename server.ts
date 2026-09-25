@@ -15,6 +15,7 @@ import mcpHandler from './api/mcp.js';
 import { getStationCrowd, getTrafficIncidents } from './lib/ltaService.js';
 import { getWeatherForecast } from './lib/weatherService.js';
 import { calculateRoute } from './lib/routingService.js';
+import { getOneMapLocation } from './lib/onemapService.js';
 
 dotenv.config();
 
@@ -35,6 +36,21 @@ app.get('/api/mcp', mcpHandler);
 // -------------------------------------------------------------
 // Dedicated Transit & Weather API Routes
 // -------------------------------------------------------------
+app.get('/api/onemap', async (req: Request, res: Response) => {
+  const postalCode =
+    req.query.postal_code ||
+    req.query.postalCode ||
+    req.query.searchVal ||
+    req.query.postal;
+  if (!postalCode) {
+    return res.status(400).json({
+      isError: true,
+      message: 'OneMap API request failed because postal_code parameter is required with upstream status 400.',
+    });
+  }
+  const result = await getOneMapLocation(String(postalCode));
+  res.status(result.isError ? 502 : 200).json(result.isError ? result : result.result);
+});
 app.get('/api/station_crowd', async (req: Request, res: Response) => {
   const stationCode = String(req.query.station_code || 'EW24');
   const result = await getStationCrowd(stationCode);

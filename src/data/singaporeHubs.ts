@@ -1021,6 +1021,17 @@ export const INITIAL_TRANSPORT_HUBS: TransportHub[] = [
 
 export const REGISTERED_MCP_TOOLS = [
   {
+    name: 'rainstrike_location_crowdlocation',
+    description: 'Returns the verified street address, geographic coordinates, and building name for a specified Singapore postal code. Data is read directly from the Singapore Land Authority (SLA) OneMap Geocoding API. Use this tool when looking up geographic coordinates, verifying building addresses, or identifying transit crowd locations by postal code. It does not provide real-time crowd passenger counts, interior building layout plans, or locations outside Singapore.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        postal_code: { type: 'string', description: "Six-digit Singapore postal code (e.g. '650114', '048624', or '238801') to look up verified address, building name, and coordinates." }
+      },
+      required: ['postal_code']
+    }
+  },
+  {
     name: 'rs_station_crowd',
     description: 'Returns passenger volume trends and forecasted crowdedness levels at 30-minute intervals for the specified Singapore MRT station. Data is retrieved directly from the Land Transport Authority (LTA) DataMall Station Crowd Density Forecast API. Use this tool when assessing rail commuter volume, station platform congestion, and pickup surge potential for taxi and PHV drivers. It does not provide real-time bus passenger loads or non-rail transit crowd statistics.',
     inputSchema: {

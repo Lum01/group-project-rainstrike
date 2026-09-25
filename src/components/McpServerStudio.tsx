@@ -29,7 +29,9 @@ export const McpServerStudio: React.FC = () => {
 
     // Preset sensible default parameters
     let defaultArgs: any = {};
-    if (toolName === 'rs_station_crowd') {
+    if (toolName === 'rainstrike_location_crowdlocation') {
+      defaultArgs = { postal_code: '650114' };
+    } else if (toolName === 'rs_station_crowd') {
       defaultArgs = { station_code: 'EW24' };
     } else if (toolName === 'rs_traffic_incidents') {
       defaultArgs = {};
