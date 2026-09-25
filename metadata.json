@@ -1,0 +1,6 @@
+{
+  "name": "TaxiPulse - Crowd & Weather Demand Predictor",
+  "description": "Predictive taxi rider demand engine combining crowd density telemetry, microclimate weather forecasts, and transit disruptions to forecast ride surges and optimize fleet staging.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
