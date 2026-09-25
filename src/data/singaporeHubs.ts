@@ -1021,6 +1021,48 @@ export const INITIAL_TRANSPORT_HUBS: TransportHub[] = [
 
 export const REGISTERED_MCP_TOOLS = [
   {
+    name: 'rs_station_crowd',
+    description: 'Returns passenger volume trends and forecasted crowdedness levels at 30-minute intervals for the specified Singapore MRT station. Data is retrieved directly from the Land Transport Authority (LTA) DataMall Station Crowd Density Forecast API. Use this tool when assessing rail commuter volume, station platform congestion, and pickup surge potential for taxi and PHV drivers. It does not provide real-time bus passenger loads or non-rail transit crowd statistics.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        station_code: { type: 'string', description: "MRT station alphanumeric code (e.g. 'NS1', 'EW24', 'DT35', 'CC1', 'NE1', 'TE1') to query crowd density" }
+      },
+      required: ['station_code']
+    }
+  },
+  {
+    name: 'rs_traffic_incidents',
+    description: 'Returns active road accidents, vehicle breakdowns, roadworks, and heavy congestion alerts across the Singapore expressway and arterial network. Data is read directly from the Singapore Land Transport Authority (LTA) DataMall Traffic Incidents API. Call this tool to identify live route obstructions, delays, and incident hotspots to guide driver detours. It does not cover planned future road closures or general traffic light operational statuses.',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
+    name: 'rs_weather_forecast',
+    description: 'Returns forecasted rainfall intensity, storm warnings, and wet-weather conditions by time range across Singapore sectors. Data is read from the Singapore National Environment Agency (NEA) weather service API. Call this tool when predicting passenger surge triggered by sudden downpours or adverse driving conditions. It does not provide historical multi-year climate observations or typhoon tracking outside Singapore.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        date_time_range: { type: 'string', description: "Target date-time string (ISO 8601 like '2026-09-25T14:00:00' or 'now') specifying the forecast window" }
+      }
+    }
+  },
+  {
+    name: 'rs_route_calculate',
+    description: 'Returns travel distance and live duration estimates between origin and destination coordinates for drive, walk, or transit modes. Upstream is the GrabMaps routing API with hyperlocal Southeast Asian street network intelligence. Use this tool when calculating point-to-point journey times, driver repositioning distances, or passenger drop-off ETAs. It does not provide real-time toll transaction charges or variable electronic road pricing (ERP) debits.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        start: { type: 'string', description: "Origin starting coordinates in 'lat,lng' format (e.g., '1.3521,103.8198')" },
+        end: { type: 'string', description: "Destination endpoint coordinates in 'lat,lng' format (e.g., '1.2966,103.8501')" },
+        mode: { type: 'string', enum: ['drive', 'walk', 'transit'], description: "Transportation mode: 'drive', 'walk', or 'transit'" }
+      },
+      required: ['start', 'end']
+    }
+  },
+  {
     name: 'lta_datamall_get_hub_passenger_traffic',
     description: 'Queries Singapore LTA Datamall MCP endpoint for real-time passenger volume tap-outs, MRT transfer flows, bus arrivals, and MRT train disruption status at key transit hubs.',
     inputSchema: {

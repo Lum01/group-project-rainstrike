@@ -29,7 +29,15 @@ export const McpServerStudio: React.FC = () => {
 
     // Preset sensible default parameters
     let defaultArgs: any = {};
-    if (toolName === 'lta_datamall_get_hub_passenger_traffic') {
+    if (toolName === 'rs_station_crowd') {
+      defaultArgs = { station_code: 'EW24' };
+    } else if (toolName === 'rs_traffic_incidents') {
+      defaultArgs = {};
+    } else if (toolName === 'rs_weather_forecast') {
+      defaultArgs = { date_time_range: 'now' };
+    } else if (toolName === 'rs_route_calculate') {
+      defaultArgs = { start: '1.3521,103.8198', end: '1.2966,103.8501', mode: 'drive' };
+    } else if (toolName === 'lta_datamall_get_hub_passenger_traffic') {
       defaultArgs = { hub_id: 'jurong_east', include_mrt_alerts: true };
     } else if (toolName === 'nea_weather_get_forecast') {
       defaultArgs = { sector: 'Jurong' };
@@ -76,7 +84,10 @@ export const McpServerStudio: React.FC = () => {
     try {
       const res = await fetch('/api/mcp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json, text/event-stream'
+        },
         body: JSON.stringify(payload)
       });
       const data = await res.json();
@@ -108,7 +119,10 @@ export const McpServerStudio: React.FC = () => {
     try {
       const res = await fetch('/api/mcp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json, text/event-stream'
+        },
         body: JSON.stringify(payload)
       });
       const data = await res.json();

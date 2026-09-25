@@ -8,9 +8,13 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
-import { INITIAL_TRANSPORT_HUBS, REGISTERED_MCP_TOOLS } from './src/data/singaporeHubs';
+import { INITIAL_TRANSPORT_HUBS } from './src/data/singaporeHubs';
 import { evaluateHubDemand, getPrioritizedHubList } from './src/utils/predictiveModel';
 import { TransportHub, WeatherCondition } from './src/types/dispatch';
+import mcpHandler from './api/mcp.js';
+import { getStationCrowd, getTrafficIncidents } from './lib/ltaService.js';
+import { getWeatherForecast } from './lib/weatherService.js';
+import { calculateRoute } from './lib/routingService.js';
 
 dotenv.config();
 
@@ -21,6 +25,38 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+
+// -------------------------------------------------------------
+// MCP Server Streamable HTTP Endpoints (Protocol 2025-11-25)
+// -------------------------------------------------------------
+app.post('/api/mcp', mcpHandler);
+app.get('/api/mcp', mcpHandler);
+
+// -------------------------------------------------------------
+// Dedicated Transit & Weather API Routes
+// -------------------------------------------------------------
+app.get('/api/station_crowd', async (req: Request, res: Response) => {
+  const stationCode = String(req.query.station_code || 'EW24');
+  const result = await getStationCrowd(stationCode);
+  res.status(result.isError ? 502 : 200).json(result.isError ? result : result.result);
+});
+
+app.get('/api/traffic_incidents', async (_req: Request, res: Response) => {
+  const result = await getTrafficIncidents();
+  res.status(result.isError ? 502 : 200).json(result.isError ? result : result.result);
+});
+
+app.get('/api/weather_forecast', async (req: Request, res: Response) => {
+  const range = String(req.query.date_time_range || 'now');
+  const result = await getWeatherForecast(range);
+  res.status(result.isError ? 502 : 200).json(result.isError ? result : result.result);
+});
+
+app.get('/api/route_calculate', async (req: Request, res: Response) => {
+  const { start, end, mode } = req.query;
+  const result = await calculateRoute(String(start || ''), String(end || ''), (mode as any) || 'drive');
+  res.status(result.isError ? 502 : 200).json(result.isError ? result : result.result);
+});
 
 // In-memory state of transport hubs
 let currentHubs: TransportHub[] = JSON.parse(JSON.stringify(INITIAL_TRANSPORT_HUBS));
@@ -68,287 +104,6 @@ async function fetchLiveNeaForecast(): Promise<Record<string, string>> {
     return {};
   }
 }
-
-// -------------------------------------------------------------
-// MCP Server Implementation (Model Context Protocol JSON-RPC 2.0)
-// -------------------------------------------------------------
-
-app.post('/api/mcp', async (req: Request, res: Response) => {
-  const { jsonrpc, id, method, params } = req.body;
-
-  if (jsonrpc !== '2.0') {
-    return res.status(400).json({
-      jsonrpc: '2.0',
-      id: id || null,
-      error: { code: -32600, message: 'Invalid Request: jsonrpc must be "2.0"' }
-    });
-  }
-
-  // Handle MCP methods
-  switch (method) {
-    case 'tools/list': {
-      return res.json({
-        jsonrpc: '2.0',
-        id,
-        result: {
-          tools: REGISTERED_MCP_TOOLS
-        }
-      });
-    }
-
-    case 'tools/call': {
-      const toolName = params?.name;
-      const args = params?.arguments || {};
-
-      try {
-        let executionResult: any;
-
-        if (toolName === 'lta_datamall_get_hub_passenger_traffic') {
-          const hub = currentHubs.find(h => h.id === args.hub_id) || currentHubs[0];
-          executionResult = {
-            hub_id: hub.id,
-            name: hub.name,
-            human_traffic: hub.humanTraffic,
-            taxi_supply: hub.taxiSupply,
-            source: 'Singapore LTA Datamall Live MCP Bus & Train API v2.1',
-            timestamp: new Date().toISOString()
-          };
-        } else if (toolName === 'nea_weather_get_forecast') {
-          const sector = String(args.sector || 'Jurong').toLowerCase();
-          const liveNea = await fetchLiveNeaForecast();
-          const matchedKey = Object.keys(liveNea).find(k => k.includes(sector));
-          const forecastCondition = matchedKey ? liveNea[matchedKey] : 'Thundery Showers';
-
-          executionResult = {
-            sector: args.sector,
-            forecast_2hr: forecastCondition,
-            source: 'NEA Singapore 2-Hour Nowcast API (Data.gov.sg)',
-            rainfall_intensity_mm_hr: forecastCondition.includes('Thundery') ? 38.5 : forecastCondition.includes('Rain') ? 16.0 : 0.0,
-            squall_warning_active: forecastCondition.includes('Thundery') || forecastCondition.includes('Heavy')
-          };
-        } else if (toolName === 'onemap_get_hub_ingress_egress') {
-          const hub = currentHubs.find(h => h.id === args.hub_id) || currentHubs[0];
-          executionResult = {
-            hub_id: hub.id,
-            hub_name: hub.name,
-            routing_engine: 'SLA OneMap Singapore Live Routing & ERP Intelligence',
-            ingress: hub.routing.ingress,
-            egress: hub.routing.egress,
-            hourly_congestion_profile: hub.routing.historicalHourlyDurations
-          };
-        } else if (toolName === 'grab_predict_taxi_surge') {
-          const targetHubId = args.hub_id;
-          const weatherOverride = args.weather_override as WeatherCondition | undefined;
-          const disruptionOverride = args.mrt_disruption_override as boolean | undefined;
-
-          if (targetHubId && targetHubId !== 'all') {
-            const hub = currentHubs.find(h => h.id === targetHubId);
-            if (!hub) throw new Error(`Hub "${targetHubId}" not found`);
-            const evaluated = evaluateHubDemand(hub, {
-              weatherCondition: weatherOverride,
-              mrtDisruptionActive: disruptionOverride
-            });
-            executionResult = evaluated.prediction;
-          } else {
-            const list = getPrioritizedHubList(currentHubs, {
-              weatherCondition: weatherOverride,
-              mrtDisruptionActive: disruptionOverride
-            });
-            executionResult = {
-              prioritized_hubs: list.map(h => ({
-                id: h.id,
-                name: h.name,
-                taxi_demand_index: h.prediction.taxiDemandIndex,
-                priority: h.prediction.priority,
-                surge_multiplier: h.prediction.surgeMultiplier,
-                supply_deficit: h.prediction.supplyDeficit,
-                best_time_to_enter: h.routing.ingress.bestTimeToEnter,
-                optimal_ingress_corridor: h.routing.ingress.corridorName
-              }))
-            };
-          }
-        } else if (toolName === 'onemap_get_open_map_layer') {
-          const layerType = args.layer_type || 'night_basemap';
-          executionResult = {
-            provider: 'Singapore Land Authority (SLA) & OpenStreetMap Foundation',
-            layer_type: layerType,
-            api_key_required: false,
-            tile_endpoint: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-            fallback_tile_endpoint: 'https://www.onemap.gov.sg/maps/tiles/Default/{z}/{x}/{y}.png',
-            status: 'OPERATIONAL_ZERO_KEY',
-            license: 'Open Data Commons / SLA Open Map Policy',
-            supported_sectors: ['Central', 'East', 'West', 'North', 'North-East', 'South']
-          };
-        } else if (toolName === 'grab_get_prioritized_taxi_demand_list') {
-          const minPriority = args.min_priority || 'all';
-          let list = getPrioritizedHubList(currentHubs);
-          if (minPriority !== 'all') {
-            list = list.filter(h => h.prediction.priority === minPriority);
-          }
-          executionResult = {
-            total_evaluated_hubs: list.length,
-            ranked_demand_list: list.map((h, index) => ({
-              rank: index + 1,
-              id: h.id,
-              name: h.name,
-              region: h.region,
-              taxi_demand_index: h.prediction.taxiDemandIndex,
-              priority: h.prediction.priority,
-              projected_demand_per_min: h.prediction.projectedDemandPerMin,
-              supply_deficit: h.prediction.supplyDeficit,
-              surge_multiplier: h.prediction.surgeMultiplier,
-              weather: h.weather.condition,
-              best_ingress_window: h.routing.ingress.bestTimeToEnter,
-              ingress_corridor: h.routing.ingress.corridorName,
-              best_egress_window: h.routing.egress.bestTimeToExit
-            }))
-          };
-        } else if (toolName === 'grab_dispatch_fleet_broadcast') {
-          const hub = currentHubs.find(h => h.id === args.hub_id);
-          if (!hub) throw new Error(`Hub "${args.hub_id}" not found`);
-
-          const broadcast = {
-            id: `DISPATCH-${Date.now().toString().slice(-5)}`,
-            timestamp: new Date().toLocaleTimeString(),
-            targetHubId: hub.id,
-            hubName: hub.name,
-            surgeMultiplier: args.surge_multiplier || hub.prediction.surgeMultiplier,
-            bonusIncentive: args.bonus_incentive_sgd || 5.0,
-            recommendedIngressRoute: hub.routing.ingress.corridorName,
-            driversTargeted: Math.round(hub.prediction.recommendedDriverReposition * 2.2),
-            acceptedDrivers: Math.round(hub.prediction.recommendedDriverReposition * 0.85),
-            status: 'active'
-          };
-          broadcastHistory.unshift(broadcast);
-          executionResult = {
-            broadcast_status: 'SUCCESS',
-            broadcast_details: broadcast,
-            message: `Pushed priority fleet advisory to ${broadcast.driversTargeted} drivers within 8km radius of ${hub.name}.`
-          };
-        } else {
-          return res.status(404).json({
-            jsonrpc: '2.0',
-            id,
-            error: { code: -32601, message: `Tool "${toolName}" not found` }
-          });
-        }
-
-        return res.json({
-          jsonrpc: '2.0',
-          id,
-          result: {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(executionResult, null, 2)
-              }
-            ],
-            isError: false
-          }
-        });
-      } catch (err: any) {
-        return res.json({
-          jsonrpc: '2.0',
-          id,
-          result: {
-            content: [
-              {
-                type: 'text',
-                text: `Error executing ${toolName}: ${err.message}`
-              }
-            ],
-            isError: true
-          }
-        });
-      }
-    }
-
-    case 'resources/list': {
-      return res.json({
-        jsonrpc: '2.0',
-        id,
-        result: {
-          resources: [
-            {
-              uri: 'lta://singapore/transport-hubs',
-              name: 'LTA Datamall Transport Hub Human Flows',
-              mimeType: 'application/json',
-              description: 'Real-time commuter tap-out and station transfer volumes for key transit interchanges'
-            },
-            {
-              uri: 'nea://singapore/weather-nowcast',
-              name: 'NEA Live 2-Hour Nowcast & Rain Matrix',
-              mimeType: 'application/json',
-              description: 'Radar rainfall intensity and cloudburst forecast'
-            },
-            {
-              uri: 'onemap://singapore/traffic-routing-matrix',
-              name: 'SLA OneMap Ingress & Egress Routing',
-              mimeType: 'application/json',
-              description: 'Historical and forward congestion data with ERP avoidance corridors'
-            }
-          ]
-        }
-      });
-    }
-
-    case 'resources/read': {
-      const uri = params?.uri;
-      if (uri === 'lta://singapore/transport-hubs') {
-        return res.json({
-          jsonrpc: '2.0',
-          id,
-          result: {
-            contents: [
-              {
-                uri,
-                mimeType: 'application/json',
-                text: JSON.stringify(currentHubs.map(h => ({
-                  id: h.id,
-                  name: h.name,
-                  human_traffic: h.humanTraffic,
-                  taxi_supply: h.taxiSupply
-                })), null, 2)
-              }
-            ]
-          }
-        });
-      } else if (uri === 'nea://singapore/weather-nowcast') {
-        return res.json({
-          jsonrpc: '2.0',
-          id,
-          result: {
-            contents: [
-              {
-                uri,
-                mimeType: 'application/json',
-                text: JSON.stringify(currentHubs.map(h => ({
-                  id: h.id,
-                  name: h.name,
-                  weather: h.weather
-                })), null, 2)
-              }
-            ]
-          }
-        });
-      } else {
-        return res.status(404).json({
-          jsonrpc: '2.0',
-          id,
-          error: { code: -32602, message: `Resource "${uri}" not found` }
-        });
-      }
-    }
-
-    default: {
-      return res.status(400).json({
-        jsonrpc: '2.0',
-        id,
-        error: { code: -32601, message: `Method "${method}" not implemented` }
-      });
-    }
-  }
-});
 
 // -------------------------------------------------------------
 // REST API Endpoints for Frontend Console
